@@ -1,0 +1,6 @@
+{
+  "name": "Slack Agent for Good",
+  "description": "Multi-tenant environmental rescue and disaster relief CRM powered by Supabase, Gemini, Slack Bolt agent, and integrated MCP tools.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
