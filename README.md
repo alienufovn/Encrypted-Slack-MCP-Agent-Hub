@@ -2,8 +2,7 @@
 
 My youtube's video clip link about 4 minutes : [https://youtu.be/a4iDq5gOff4](https://youtu.be/a4iDq5gOff4)
 
-My Eco-Response Hub - Slack Agent for Good • v2.0.4 [https://aistudio.google.com/apps/7fdec22b-9218-412c-a301-5b4adadbc9e1?showPreview=true&showAssistant=true&fullscreenApplet=true]
-(https://aistudio.google.com/apps/7fdec22b-9218-412c-a301-5b4adadbc9e1?showPreview=true&showAssistant=true&fullscreenApplet=true)
+My Eco-Response Hub - Slack Agent for Good • v2.0.4 https://aistudio.google.com/apps/7fdec22b-9218-412c-a301-5b4adadbc9e1?showPreview=true&showAssistant=true&fullscreenApplet=true
 
 My  workspace's owner's link : [https://crm-azo2933.slack.com/](https://crm-azo2933.slack.com/)
 
