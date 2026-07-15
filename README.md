@@ -1,7 +1,7 @@
 [ Slack Workspace Workspace (crm-azo2933) ]│  ▲│  │ (Interactions & Webhook Streams via HTTPS POST)▼  │[ Google AI Studio Cloud Run Gateway Engine ]│  ▲│  │ (Model Context Protocol / SSE Transport Loop)▼  │[ Supabase Secure Edge Infrastructure & Auth ]│  ▲│  │ (Row-Level Security & AES-256 Field Hashes)▼  │[ CRM/Telemetry Tables ]
 My youtube's video clip link about 4 minutes : [https://youtu.be/a4iDq5gOff4](https://youtu.be/a4iDq5gOff4)
 My Eco-Response Hub - Slack Agent for Good • v2.0.4 [https://aistudio.google.com/apps/7fdec22b-9218-412c-a301-5b4adadbc9e1?showPreview=true&showAssistant=true&fullscreenApplet=true](https://aistudio.google.com/apps/7fdec22b-9218-412c-a301-5b4adadbc9e1?showPreview=true&showAssistant=true&fullscreenApplet=true)
-My 
+My  workspace's owner's link : [https://crm-azo2933.slack.com/](https://crm-azo2933.slack.com/)
 ### Component Breakdown
 * **Client-Side Interface Canvas:** Engineered as a lightning-fast React application utilizing Vite and TypeScript. It includes an autonomous interactive guide component that automatically scrolls layout nodes into center focus during short-window screencasts.
 * **Orchestration & Gateway Layer:** A resilient Node.js / Express backend server cluster deployed inside Google Cloud Run environments. This module interfaces directly with the `@google/generative-ai` SDK, mapping user strings to distinct analytical actions.
