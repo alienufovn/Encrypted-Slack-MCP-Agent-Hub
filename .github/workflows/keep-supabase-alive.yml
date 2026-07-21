@@ -10,25 +10,31 @@ jobs:
   ping-supabase:
     runs-on: ubuntu-latest
     steps:
-      - name: Clean URL and Ping Auth Health Endpoint
+      - name: Ping Supabase Auth Health
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
         run: |
-          # Strip any trailing slash from the SUPABASE_URL secret
-          RAW_URL="${{ secrets.SUPABASE_URL }}"
-          CLEAN_URL="${RAW_URL%/}"
+          # Ensure URL is trimmed and not empty
+          URL=$(echo "$SUPABASE_URL" | tr -d '[:space:]' | sed 's/*$//')
           
-          echo "Pinging $CLEAN_URL/auth/v1/health..."
-          
-          # Perform the request and fail if HTTP status code is not 200
-          response=$(curl -s -o /dev/null -w "%{http_code}" -X GET "$CLEAN_URL/auth/v1/health" \
-            -H "apikey: ${{ secrets.SUPABASE_ANON_KEY }}" \
-            -H "Authorization: Bearer ${{ secrets.SUPABASE_ANON_KEY }}")
-            
-          echo "HTTP Response Code: $response"
-          
-          if [ "$response" -eq 200 ] || [ "$response" -eq 204 ]; then
+          if [ -z "$URL" ]; then
+            echo "❌ Error: SUPABASE_URL secret is empty or missing!"
+            exit 1
+          fi
+
+          echo "Targeting endpoint: ${URL}/auth/v1/health"
+
+          RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" -X GET "${URL}/auth/v1/health" \
+            -H "apikey: ${SUPABASE_ANON_KEY}" \
+            -H "Authorization: Bearer ${SUPABASE_ANON_KEY}")
+
+          echo "HTTP Status Code: $RESPONSE"
+
+          if [ "$RESPONSE" -eq 200 ] || [ "$RESPONSE" -eq 204 ]; then
             echo "✅ Supabase ping successful!"
             exit 0
           else
-            echo "❌ Ping failed with status code $response"
+            echo "❌ Ping failed with status code $RESPONSE"
             exit 1
           fi
