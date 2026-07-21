@@ -4,14 +4,31 @@ on:
   schedule:
     # Runs at 09:00 UTC every Monday and Thursday
     - cron: '0 9 * * 1,4'
-  workflow_dispatch: # Allows you to manually trigger it anytime from the Actions tab
+  workflow_dispatch: # Allows manual triggering from the Actions tab
 
 jobs:
   ping-supabase:
     runs-on: ubuntu-latest
     steps:
-      - name: Ping Supabase REST API
+      - name: Clean URL and Ping Auth Health Endpoint
         run: |
-          curl -i -X GET "${{ secrets.SUPABASE_URL }}/rest/v1/" \
+          # Strip any trailing slash from the SUPABASE_URL secret
+          RAW_URL="${{ secrets.SUPABASE_URL }}"
+          CLEAN_URL="${RAW_URL%/}"
+          
+          echo "Pinging $CLEAN_URL/auth/v1/health..."
+          
+          # Perform the request and fail if HTTP status code is not 200
+          response=$(curl -s -o /dev/null -w "%{http_code}" -X GET "$CLEAN_URL/auth/v1/health" \
             -H "apikey: ${{ secrets.SUPABASE_ANON_KEY }}" \
-            -H "Authorization: Bearer ${{ secrets.SUPABASE_ANON_KEY }}"
+            -H "Authorization: Bearer ${{ secrets.SUPABASE_ANON_KEY }}")
+            
+          echo "HTTP Response Code: $response"
+          
+          if [ "$response" -eq 200 ] || [ "$response" -eq 204 ]; then
+            echo "✅ Supabase ping successful!"
+            exit 0
+          else
+            echo "❌ Ping failed with status code $response"
+            exit 1
+          fi
