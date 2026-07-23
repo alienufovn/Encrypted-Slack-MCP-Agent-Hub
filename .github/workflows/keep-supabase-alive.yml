@@ -1,42 +1,80 @@
-name: Keep Supabase Active
+name: Keep Supabase Active via MCP Server
 
 on:
   schedule:
     # Runs at 09:00 UTC every Monday and Thursday
     - cron: '0 9 * * 1,4'
-  workflow_dispatch: # Allows manual triggering from the Actions tab
+  workflow_dispatch: # Allows manual trigger from GitHub Actions UI
 
 jobs:
-  ping-supabase:
+  mcp-ping:
     runs-on: ubuntu-latest
     steps:
-      - name: Ping Supabase Auth Health
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install MCP Client SDK
+        run: npm install @modelcontextprotocol/sdk dotenv
+
+      - name: Execute MCP Server Ping Script
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
         run: |
-          # 1. Fallback to direct URL if secret is missing or empty
-          TARGET_URL="${SUPABASE_URL:-https://jmnuruiejlxflhvvybdh.supabase.co}"
-          
-          # Remove any potential whitespace or hidden characters
-          CLEAN_URL=$(echo "$TARGET_URL" | tr -d '[:space:]')
-          ENDPOINT="${CLEAN_URL}/auth/v1/health"
+          node -e '
+          const { Client } = require("@modelcontextprotocol/sdk/client/index.js");
+          const { SSEClientTransport } = require("@modelcontextprotocol/sdk/client/sse.js");
 
-          echo "Pinging endpoint: $ENDPOINT"
+          async function pingMCP() {
+            const baseUrl = process.env.SUPABASE_URL.replace(/\/$/, "");
+            // Target your Supabase MCP Edge Function endpoint
+            const mcpEndpoint = `${baseUrl}/functions/v1/mcp-server`;
+            const apiKey = process.env.SUPABASE_ANON_KEY;
 
-          # 2. Perform health check request
-          HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" -X GET "$ENDPOINT" \
-            -H "apikey: ${SUPABASE_ANON_KEY}" \
-            -H "Authorization: Bearer ${SUPABASE_ANON_KEY}")
+            console.log(`Connecting to MCP Server at: ${mcpEndpoint}`);
 
-          echo "Received HTTP Status Code: $HTTP_STATUS"
+            try {
+              // Initialize SSE Transport with Supabase Headers
+              const transport = new SSEClientTransport(
+                new URL(mcpEndpoint),
+                {
+                  headers: {
+                    "apikey": apiKey,
+                    "Authorization": `Bearer ${apiKey}`
+                  }
+                }
+              );
 
-          # 3. Supabase health check returns 200 OK when online
-          if [ "$HTTP_STATUS" -eq 200 ] || [ "$HTTP_STATUS" -eq 204 ]; then
-            echo "✅ Supabase project is active and healthy!"
-            exit 0
-          else
-            echo "⚠️ Health endpoint responded with code $HTTP_STATUS"
-            # Return 0 so it registers activity on Supabase regardless of key permissions
-            exit 0
-          fi
+              const client = new Client(
+                { name: "github-keepalive-client", version: "1.0.0" },
+                { capabilities: {} }
+              );
+
+              await client.connect(transport);
+              console.log("✅ MCP Client connected successfully!");
+
+              // List tools or ping a tool to generate database activity
+              const tools = await client.listTools();
+              console.log("Available MCP Tools:", tools.tools.map(t => t.name));
+
+              console.log("✅ MCP Keep-Alive Ping completed successfully.");
+              process.exit(0);
+            } catch (error) {
+              console.error("⚠️ MCP Ping failed, falling back to direct auth ping:", error.message);
+              
+              // Fallback HTTP check to ensure the run completes cleanly
+              const res = await fetch(`${baseUrl}/auth/v1/health`, {
+                headers: { "apikey": apiKey }
+              });
+              console.log("Fallback status:", res.status);
+              process.exit(0);
+            }
+          }
+
+          pingMCP();
+          '
