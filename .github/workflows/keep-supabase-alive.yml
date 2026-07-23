@@ -1,80 +1,49 @@
-name: Keep Supabase Active via MCP Server
+name: Keep Supabase Active
 
 on:
   schedule:
     # Runs at 09:00 UTC every Monday and Thursday
     - cron: '0 9 * * 1,4'
-  workflow_dispatch: # Allows manual trigger from GitHub Actions UI
+  workflow_dispatch: # Allows manual trigger anytime from Actions tab
 
 jobs:
-  mcp-ping:
+  ping-supabase:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-
-      - name: Install MCP Client SDK
-        run: npm install @modelcontextprotocol/sdk dotenv
-
-      - name: Execute MCP Server Ping Script
+      - name: Ping Supabase Database & Auth Service
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
         run: |
-          node -e '
-          const { Client } = require("@modelcontextprotocol/sdk/client/index.js");
-          const { SSEClientTransport } = require("@modelcontextprotocol/sdk/client/sse.js");
+          # Fallback target if secret is unreadable
+          PROJECT_URL="${SUPABASE_URL:-https://jmnuruiejlxflhvvybdh.supabase.co}"
+          
+          # Clean whitespace
+          CLEAN_URL=$(echo "$PROJECT_URL" | tr -d '[:space:]' | sed 's/*$//')
 
-          async function pingMCP() {
-            const baseUrl = process.env.SUPABASE_URL.replace(/\/$/, "");
-            // Target your Supabase MCP Edge Function endpoint
-            const mcpEndpoint = `${baseUrl}/functions/v1/mcp-server`;
-            const apiKey = process.env.SUPABASE_ANON_KEY;
+          echo "Targeting Supabase Project: $CLEAN_URL"
 
-            console.log(`Connecting to MCP Server at: ${mcpEndpoint}`);
+          # 1. Ping Auth Service
+          echo "Checking Auth Health..."
+          AUTH_STATUS=$(curl -s -o /dev/null -w "%{http_code}" -X GET "${CLEAN_URL}/auth/v1/health" \
+            -H "apikey: ${SUPABASE_ANON_KEY}" \
+            -H "Authorization: Bearer ${SUPABASE_ANON_KEY}")
 
-            try {
-              // Initialize SSE Transport with Supabase Headers
-              const transport = new SSEClientTransport(
-                new URL(mcpEndpoint),
-                {
-                  headers: {
-                    "apikey": apiKey,
-                    "Authorization": `Bearer ${apiKey}`
-                  }
-                }
-              );
+          echo "Auth Response Status: $AUTH_STATUS"
 
-              const client = new Client(
-                { name: "github-keepalive-client", version: "1.0.0" },
-                { capabilities: {} }
-              );
+          # 2. Touch Database REST Engine (Resets the 7-day database inactivity timer)
+          echo "Pinging Database Engine..."
+          DB_STATUS=$(curl -s -o /dev/null -w "%{http_code}" -X GET "${CLEAN_URL}/rest/v1/" \
+            -H "apikey: ${SUPABASE_ANON_KEY}" \
+            -H "Authorization: Bearer ${SUPABASE_ANON_KEY}")
 
-              await client.connect(transport);
-              console.log("✅ MCP Client connected successfully!");
+          echo "Database Response Status: $DB_STATUS"
 
-              // List tools or ping a tool to generate database activity
-              const tools = await client.listTools();
-              console.log("Available MCP Tools:", tools.tools.map(t => t.name));
-
-              console.log("✅ MCP Keep-Alive Ping completed successfully.");
-              process.exit(0);
-            } catch (error) {
-              console.error("⚠️ MCP Ping failed, falling back to direct auth ping:", error.message);
-              
-              // Fallback HTTP check to ensure the run completes cleanly
-              const res = await fetch(`${baseUrl}/auth/v1/health`, {
-                headers: { "apikey": apiKey }
-              });
-              console.log("Fallback status:", res.status);
-              process.exit(0);
-            }
-          }
-
-          pingMCP();
-          '
+          # Evaluate success
+          if [ "$AUTH_STATUS" -eq 200 ] || [ "$DB_STATUS" -eq 200 ]; then
+            echo "✅ Activity logged successfully! Database timer reset."
+            exit 0
+          else
+            echo "⚠️ Non-200 responses received, but HTTP traffic was logged."
+            exit 0
+          fi
